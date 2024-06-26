@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>布拉格晶體靈敏度提升視覺化</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .chart-container {
+            width: 80%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>布拉格晶體靈敏度提升視覺化</h1>
+    
+    <div class="chart-container">
+        <canvas id="intensityChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <canvas id="phaseChart"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="control">
+            <label for="braggWavelength">布拉格波長 (nm)</label>
+            <input type="range" id="braggWavelength" min="500" max="700" value="600" step="1">
+            <span id="braggWavelengthValue">600</span>
+        </div>
+        <div class="control">
+            <label for="bandwidth">頻寬參數 (nm)</label>
+            <input type="range" id="bandwidth" min="1" max="20" value="10" step="0.1">
+            <span id="bandwidthValue">10</span>
+        </div>
+        <div class="control">
+            <label for="crystalThickness">晶體厚度 (μm)</label>
+            <input type="range" id="crystalThickness" min="1" max="100" value="50" step="1">
+            <span id="crystalThicknessValue">50</span>
+        </div>
+    </div>
+
+    <script>
+        const intensityCtx = document.getElementById('intensityChart').getContext('2d');
+        const phaseCtx = document.getElementById('phaseChart').getContext('2d');
+        
+        let intensityChart, phaseChart;
+
+        function updateCharts() {
+            const braggWavelength = parseFloat(document.getElementById('braggWavelength').value);
+            const bandwidth = parseFloat(document.getElementById('bandwidth').value);
+            const crystalThickness = parseFloat(document.getElementById('crystalThickness').value);
+
+            document.getElementById('braggWavelengthValue').textContent = braggWavelength;
+            document.getElementById('bandwidthValue').textContent = bandwidth;
+            document.getElementById('crystalThicknessValue').textContent = crystalThickness;
+
+            const wavelengths = Array.from({length: 201}, (_, i) => i + 500);
+
+            const intensities = wavelengths.map(lambda => 
+                Math.exp(-Math.pow(lambda - braggWavelength, 2) / (2 * Math.pow(bandwidth, 2)))
+            );
+
+            const phases = wavelengths.map(lambda => 
+                2 * Math.PI * 1.5 * crystalThickness / lambda
+            );
+
+            if (intensityChart) intensityChart.destroy();
+            if (phaseChart) phaseChart.destroy();
+
+            intensityChart = new Chart(intensityCtx, {
+                type: 'line',
+                data: {
+                    labels: wavelengths,
+                    datasets: [{
+                        label: '透射強度',
+                        data: intensities,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '波長 (nm)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '相對強度'
+                            },
+                            min: 0,
+                            max: 1
+                        }
+                    }
+                }
+            });
+
+            phaseChart = new Chart(phaseCtx, {
+                type: 'line',
+                data: {
+                    labels: wavelengths,
+                    datasets: [{
+                        label: '相位',
+                        data: phases,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '波長 (nm)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '相位 (rad)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('braggWavelength').addEventListener('input', updateCharts);
+        document.getElementById('bandwidth').addEventListener('input', updateCharts);
+        document.getElementById('crystalThickness').addEventListener('input', updateCharts);
+
+        updateCharts();
+    </script>
+</body>
+</html>
